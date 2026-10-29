@@ -14,6 +14,7 @@
 - Fondations : l'As (Excuse pour les atouts) puis on monte dans la même enseigne ; avec l'As de pique posé, un 2 de pique retourné doit aller dessus, sinon coup oublié.
 - (Ancien :) Fautif : annulation, il récupère 2 cartes du tas de l'autre (choix de l'utilisateur ; le jeu de base, lui, fait retourner 2 cartes de sa propre pioche), la main passe à celui qui a crié. Fausse alerte : celui qui crie récupère 2 cartes du tas de l'autre.
 - Jouer sans avoir crié = crapette manquée (une seule à la fois, pas de chaîne).
+- Transport : plus de PeerJS/WebRTC (échouait entre 5G et Wi‑Fi, aucun relais TURN gratuit fiable). Les deux joueurs se connectent en WebSocket à `relay.js` (lancé par `server.js`, route `/ws`, bibliothèque `ws`), qui recopie les messages ; il faut donc jouer sur l'adresse du serveur (pas sur GitHub Pages). `vendor/peerjs.min.js` n'est plus utilisé. Hébergement prévu : Render (gratuit, se rendort après inactivité ≈ 15 min, réveil ≈ 30-60 s).
 - Réseau : l'invité envoie le `seq` qu'il voit ; un « Crapette ! » en retard est jugé sur l'état vu.
 
 ## Interface (paysage)

@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/game.test.mjs && node test/css.test.mjs"
+    "test": "node test/game.test.mjs && node test/css.test.mjs && node test/relay.test.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
   }
 }

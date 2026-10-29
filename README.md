@@ -23,6 +23,6 @@ npm test
 
 ## Mettre en ligne
 
-Le site est statique : n'importe quel hébergement de fichiers convient (GitHub Pages, Netlify, Cloudflare Pages…). Pas besoin de serveur ; `server.js` ne sert qu'au développement.
+Il faut un hébergeur Node.js (pas un simple hébergeur de fichiers) : `server.js` sert le jeu et le relais WebSocket (`/ws`) par lequel passent les deux joueurs. Exemple sur Render (gratuit) : Web Service relié à ce dépôt, build `npm install`, start `npm start`. Les joueurs ouvrent l'adresse Render.
 
 Règles et décisions de conception : voir [NOTES.md](NOTES.md).
