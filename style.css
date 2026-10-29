@@ -1,0 +1,116 @@
+﻿:root {
+  /* paysage : la taille des cartes suit la hauteur ET la largeur de l'écran */
+  --cw: min(calc((100dvh - 64px) / 4), calc((100dvh - 150px) / 2.8), calc((100vw - 56px) / 7.6), 120px);
+  --ch: calc(var(--cw) * 1.4);
+  --host: #2f6fd6;
+  --guest: #d6452f;
+  --felt: #1d6b43;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--felt); color: #fff; font-family: system-ui, sans-serif; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+#app { max-width: 540px; margin: 0 auto; min-height: 100%; padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)); }
+
+#app.ingame { max-width: none; height: 100dvh; overflow: hidden; padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)); }
+
+button { font: inherit; border: 0; border-radius: 12px; padding: 14px 18px; background: rgba(255,255,255,.18); color: #fff; font-weight: 600; }
+button.primary { background: #ffd54a; color: #222; }
+button.ghost { background: transparent; border: 1px solid rgba(255,255,255,.4); }
+button.mini { padding: 6px 11px; border-radius: 8px; font-size: 14px; }
+input[type=text], input:not([type]) { font: inherit; border: 0; border-radius: 12px; padding: 14px; text-transform: uppercase; text-align: center; letter-spacing: .2em; width: 100%; }
+
+/* accueil / attente / éditeur */
+.home, .editor { display: flex; flex-direction: column; gap: 14px; padding: 24px 12px; max-width: 380px; margin: 0 auto; text-align: center; }
+.home h1 { font-size: 44px; margin: 8px 0 0; }
+.sub { opacity: .85; margin: 0; }
+.notice { background: rgba(0,0,0,.3); padding: 10px; border-radius: 10px; margin: 0; }
+.joinrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.bigcode { font-size: 56px; font-weight: 800; letter-spacing: .15em; background: rgba(0,0,0,.25); border-radius: 16px; padding: 12px; }
+
+.editor { padding-top: 12px; }
+.editor h2, .editor h4 { margin: 4px 0; }
+.editor h4 { text-align: left; }
+.preview { display: flex; gap: 8px; justify-content: center; --cw: 56px; }
+.edgrid, .edrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.edgrid { grid-template-columns: 1fr; max-width: 25%; }
+.edslot { position: relative; aspect-ratio: 5/7; border-radius: 10px; background: rgba(255,255,255,.16) center/cover; border: 2px dashed rgba(255,255,255,.5); display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+.edslot input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.edlabel { background: rgba(0,0,0,.55); padding: 1px 8px; border-radius: 8px 8px 0 0; font-size: 15px; }
+.edslot.red .edlabel { color: #ff9b9b; }
+.edx { position: absolute; top: 2px; right: 2px; z-index: 2; padding: 0 8px; line-height: 22px; border-radius: 11px; background: rgba(0,0,0,.65); }
+.chk { text-align: left; font-size: 14px; }
+.edrow.atouts { grid-template-columns: repeat(6, 1fr); }
+.batch { position: relative; display: block; padding: 12px; border: 2px dashed rgba(255,255,255,.5); border-radius: 12px; font-size: 14px; }
+.batch input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+/* plateau (paysage) : adversaire à gauche, colonnes au centre, toi à droite */
+.game { display: flex; flex-direction: column; gap: 4px; position: relative; height: 100%; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; flex: none; }
+.msg { font-weight: 700; padding: 3px 12px; border-radius: 999px; }
+.msg.mine { background: #ffd54a; color: #222; }
+.btns { display: flex; gap: 6px; }
+.board { flex: 1; min-height: 0; display: grid; grid-template-columns: auto 1fr auto; gap: calc(var(--cw) * .2); align-items: stretch; }
+.center { display: flex; flex-direction: column; gap: calc(var(--cw) * .2); align-items: center; min-width: 0; }
+.row { display: grid; grid-template-columns: repeat(5, var(--cw)); gap: calc(var(--cw) * .2); justify-content: center; align-items: start; }
+.row.found { width: 100%; padding: 4px 0 calc(var(--cw) * .15); border-bottom: 1px dashed rgba(255,255,255,.3); }
+.row.tab { flex: 1; }
+.zone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--cw) * .12); padding: 6px 8px; border-radius: 12px; }
+.zone.active { background: rgba(255,213,74,.16); box-shadow: 0 0 0 2px rgba(255,213,74,.5); }
+.info { text-align: center; font-size: 13px; line-height: 1.25; }
+.info b { display: block; }
+.info span { opacity: .8; }
+
+.slot { position: relative; width: var(--cw); min-height: var(--ch); display: flex; flex-direction: column; }
+.empty { width: var(--cw); height: var(--ch); border: 1.5px dashed rgba(255,255,255,.35); border-radius: calc(var(--cw) * .12); }
+/* chevauchement : 22 % de carte visible, resserré (mini 12 %) pour qu'une longue colonne tienne à l'écran */
+.col .card:not(:last-child) .tl { top: 0; font-size: min(calc(var(--cw) * .3), calc(var(--step) * .78)); }
+.col { --tabh: calc(100dvh - var(--ch) - 60px - var(--cw) * .35); --step: max(calc(var(--ch) * .12), min(calc(var(--ch) * .22), calc((var(--tabh) - var(--ch)) / max(var(--n) - 1, 1)))); }
+.col .card + .card { margin-top: calc(var(--step) - var(--ch)); }
+.col.sel .card,
+.slot.sel .card:last-of-type { outline: 3px solid #ffd54a; outline-offset: -1px; z-index: 4; transform: translateY(-8px); box-shadow: 0 8px 14px rgba(0,0,0,.45); }
+.slot.drop { outline: 2px dashed rgba(255,213,74,.6); outline-offset: 3px; border-radius: 8px; }
+.pen { position: absolute; top: 38px; left: 15%; right: 15%; z-index: 30; pointer-events: none; text-align: center; background: rgba(214,69,47,.95); border-radius: 8px; padding: 6px 10px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+button.crap { background: #d6452f; }
+.zone button.crap { white-space: nowrap; padding: 6px 8px; font-size: 13px; }
+.badge { position: absolute; right: 2px; bottom: 6px; background: rgba(0,0,0,.7); font-size: 11px; border-radius: 8px; padding: 1px 6px; z-index: 3; }
+.recycle { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: calc(var(--cw) * .6); opacity: .8; pointer-events: none; }
+.game .card, .game .slot { touch-action: none; }
+.row.tab { align-items: stretch; } /* la colonne entière reçoit la carte lâchée */
+.row.found .empty, .row.tab .empty { background: rgba(255,255,255,.12); }
+.badge.big { right: auto; bottom: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 0; background: none; font-size: calc(var(--cw) * .5); font-weight: 800; color: #fff; text-shadow: 0 0 3px #000, 0 0 6px #000, 0 1px 2px #000; }
+.drag-card { position: fixed; z-index: 200; margin: 0; pointer-events: none; transition: none; transform: scale(1.08) rotate(-2deg); box-shadow: 0 14px 24px rgba(0,0,0,.5); }
+.dragging .slot[data-target] { outline: 2px dashed rgba(255,213,74,.6); outline-offset: 3px; border-radius: 8px; }
+.dragging .slot.over { outline-style: solid; outline-color: #ffd54a; background: rgba(255,213,74,.12); }
+/* annonces : bandeau « à qui le tour » et gros « CRAPETTE ! » */
+.flash { position: fixed; z-index: 300; pointer-events: none; text-align: center; font-family: Impact, 'Arial Black', system-ui, sans-serif; font-style: italic; font-weight: 900; text-transform: uppercase; }
+.flash.turn { left: 0; right: 0; top: 36%; padding: 10px 0; font-size: 44px; background: rgba(255,255,255,.38); color: #1d3f8f; text-shadow: 0 2px 0 #fff; animation: flash-slide 1.4s ease-out forwards; }
+.flash.burst { left: 50%; top: 22%; width: min(62vw, 320px); aspect-ratio: 1.25; display: flex; align-items: center; justify-content: center; font-size: 34px; color: #fff; background: #39e615; text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000; clip-path: polygon(50% 0%, 61% 18%, 80% 8%, 78% 30%, 100% 33%, 85% 50%, 100% 67%, 78% 70%, 80% 92%, 61% 82%, 50% 100%, 39% 82%, 20% 92%, 22% 70%, 0% 67%, 15% 50%, 0% 33%, 22% 30%, 20% 8%, 39% 18%); animation: flash-pop 1.4s ease-out forwards; }
+@keyframes flash-slide { 0% { transform: translateX(-100%); opacity: 0; } 20%, 70% { transform: none; opacity: 1; } 100% { transform: translateX(100%); opacity: 0; } }
+@keyframes flash-pop { 0% { transform: translateX(-50%) scale(.2) rotate(-12deg); opacity: 0; } 25% { transform: translateX(-50%) scale(1.15) rotate(-4deg); opacity: 1; } 70% { transform: translateX(-50%) scale(1) rotate(-4deg); opacity: 1; } 100% { transform: translateX(-50%) scale(1.05) rotate(-4deg); opacity: 0; } }
+.rotate { display: none; }
+@media (orientation: portrait) and (max-width: 700px) {
+  .rotate { display: flex; position: fixed; inset: 0; z-index: 100; align-items: center; justify-content: center; padding: 30px; text-align: center; font-size: 20px; font-weight: 700; background: var(--felt); }
+}
+/* cartes */
+.card { position: relative; width: var(--cw); height: var(--ch); border-radius: calc(var(--cw) * .12); background: #fff; border: 1px solid #aaa; overflow: hidden; font-weight: 700; line-height: 1; flex: none; isolation: isolate; transition: transform .12s, box-shadow .12s; --oc: var(--host); }
+.card.owner-guest { --oc: var(--guest); }
+.card.owner-neutral { --oc: #8a8a8a; }
+.card.atout { color: #5b2a8c; }
+.card .mid.num { font-size: calc(var(--cw) * .55); }
+.card::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--oc); z-index: 2; }
+.card.red { color: #c4231f; }
+.card.black { color: #1a1a1a; }
+.card .tl { position: absolute; left: 3px; top: 2px; z-index: 3; font-size: calc(var(--cw) * .3); white-space: nowrap; }
+.card .mid { position: absolute; left: 0; right: 0; top: calc(var(--cw) * .34); bottom: 3px; display: flex; align-items: center; justify-content: center; font-size: calc(var(--cw) * .62); }
+.card .mid.court { font-size: calc(var(--cw) * .5); border: 1.5px solid currentColor; margin: 2px 4px 2px; border-radius: 4px; }
+.card .mid.img { background-size: cover; background-position: center; margin: 0 2px; border-radius: 3px; }
+.card.art .mid { top: 0; bottom: 3px; margin: 0; border-radius: 0; }
+.card.art .tl { left: 0; top: 0; padding: 1px 5px 2px 3px; border-radius: 0 0 8px 0; background: rgba(255,255,255,.88); }
+.card.back { background: repeating-linear-gradient(45deg, var(--oc) 0 5px, #fff 5px 7px); background-size: cover; background-position: center; border: 2px solid #fff; }
+
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+.box { background: #17503a; border-radius: 16px; padding: 18px; max-width: 420px; max-height: 90vh; overflow: auto; font-size: 14px; }
+.box h3 { margin-top: 0; }
+.box li { margin-bottom: 8px; }
+
+
+

@@ -1,0 +1,10 @@
+{
+  "name": "crapette",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/game.test.mjs && node test/css.test.mjs"
+  }
+}
