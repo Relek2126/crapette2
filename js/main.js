@@ -325,7 +325,18 @@ function edSlot(label, img, key, red) {
   return l;
 }
 
+// À la souris, la carte qu'on vient de retourner de sa pioche est directement attrapée (elle suit le curseur).
+// Une seule fois par carte : si on la lâche (clic dessus ou Échap), elle reste en place.
+let autoId = null;
+function autoHold() {
+  if (!usedMouse || screen !== 'game' || !state || state.winner) return;
+  const me = viewRole();
+  const hd = state.sides[me].hand;
+  if (hd && state.turn === me && hd.id !== autoId) { autoId = hd.id; sel = { k: 'hand', p: me }; }
+}
+
 function render() {
+  autoHold();
   app.replaceChildren();
   if (!state) { seenTurn = null; seenPenalty = -1; } // nouvelle partie : on réannonce le tour
   const ingame = screen === 'game' && !!state;

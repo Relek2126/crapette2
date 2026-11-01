@@ -95,9 +95,9 @@ body > .drag-card { position: fixed; z-index: 200; margin: 0; pointer-events: no
 .card.owner-guest { --oc: var(--guest); }
 .card.owner-neutral { --oc: #8a8a8a; }
 /* atouts : fond violet pâle, cadre violet et liseré doré pour les repérer d'un coup d'œil */
-.card.atout { color: #5b2a8c; background: linear-gradient(#f6efff, #dcc8f5); border: 3px solid #6a2ca0; }
+.card.atout { color: #111; background: linear-gradient(#f6efff, #dcc8f5); border: 3px solid #6a2ca0; }
 .card.atout::before { content: ''; position: absolute; inset: 0; border: 2px solid #f2c14e; border-radius: inherit; z-index: 3; pointer-events: none; }
-.card.atout .tl { background: #6a2ca0; color: #ffe9a8; padding: 1px 4px 2px 3px; border-radius: 0 0 8px 0; left: 0; top: 0; }
+.card.atout .tl { background: rgba(255,255,255,.92); color: #111; padding: 1px 4px 2px 3px; border-radius: 0 0 8px 0; left: 0; top: 0; }
 .flash.loose { left: 0; right: 0; top: 18%; padding: 14px 0; font-size: min(15vh, 22vw); line-height: 1.05; background: rgba(120,20,20,.82); color: #fff; text-shadow: 0 4px 0 #000; animation: flash-loose 4s ease-out forwards; }
 @keyframes flash-loose { 0% { transform: scale(.3) rotate(-8deg); opacity: 0; } 12% { transform: scale(1.08) rotate(-3deg); opacity: 1; } 20%, 85% { transform: scale(1) rotate(-3deg); opacity: 1; } 100% { transform: scale(1) rotate(-3deg); opacity: 0; } }
 .card .mid.num { font-size: calc(var(--cw) * .55); }
