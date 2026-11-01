@@ -1,6 +1,6 @@
 // Tests du moteur : node test/game.test.mjs   (ou npm test)
 import assert from 'node:assert/strict';
-import { newGame, apply, canMove, isLegal, canDraw, ATOUT } from '../js/game.js';
+import { newGame, apply, canMove, isLegal, canDraw, melange, ATOUT } from '../js/game.js';
 
 let n = 0;
 const test = (name, fn) => { fn(); n++; console.log('ok', name); };
@@ -289,13 +289,15 @@ test('victoire en vidant, pénalité avec moins de 2 cartes', () => {
   assert.equal(c.winner, 'guest'); // un joueur sans carte a gagné
 });
 
-test('pioche vide : le rebut est retourné dans l\'ordre', () => {
+test('pioche vide : le rebut est mélangé en alternant dessus / dessous', () => {
   let s = base();
-  s.sides.host = { stock: [], waste: [C(0, 7), C(0, 8)] };
+  s.sides.host = { stock: [], waste: [C(0, 1), C(0, 2), C(0, 3), C(0, 4), C(0, 5)] }; // 5 est au-dessus
   assert.equal(canDraw(s, 'host'), true);
+  // dessus 5, dessous 1, dessus 4, dessous 2, puis 3 : la pioche se retourne dans l'ordre inverse
+  assert.deepEqual(melange(s.sides.host.waste).map((c) => c.rank), [5, 1, 4, 2, 3]);
   s = apply(s, 'host', { t: 'draw' });
-  assert.equal(s.sides.host.hand.rank, 7); // la plus ancienne ressort la première
-  assert.equal(s.sides.host.stock[0].rank, 8);
+  assert.equal(s.sides.host.hand.rank, 3);
+  assert.deepEqual(s.sides.host.stock.map((c) => c.rank), [5, 1, 4, 2]);
   assert.equal(s.sides.host.waste.length, 0);
 });
 

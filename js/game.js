@@ -137,6 +137,15 @@ function coupObligatoire(s, role) {
   return trou >= 0 && from.some((f) => f.k !== 'tab' && !theirs(f) && canMove(s, role, f, { k: 'tab', i: trou }));
 }
 
+// Pioche vide : on refait une pioche avec le rebut en le mélangeant « à la main » : on prélève en
+// alternance une carte du dessus et une carte du dessous du rebut. La dernière carte posée sur la
+// nouvelle pioche (en fin de tableau) est la première retournée.
+export function melange(rebut) {
+  const a = [...rebut], neuf = [];
+  for (let dessus = true; a.length; dessus = !dessus) neuf.push(dessus ? a.pop() : a.shift());
+  return neuf;
+}
+
 // Pénalité : le fautif récupère 2 cartes du tas de l'autre (pioche, sinon rebut), glissées sous sa pioche.
 function transfer(s, from, to, n = 2) {
   const src = s.sides[from];
@@ -194,7 +203,7 @@ export function apply(state, role, a) {
   if (a.t === 'draw') {
     if (!canDraw(s, role)) return null;
     if (coupObligatoire(s, role)) fault = 'oubli';
-    if (!me.stock.length) { me.stock = me.waste.reverse(); me.waste = []; }
+    if (!me.stock.length) { me.stock = melange(me.waste); me.waste = []; }
     me.hand = me.stock.pop();
   } else if (a.t === 'move') {
     if (!canMove(s, role, a.from, a.to)) return null;

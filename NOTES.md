@@ -11,6 +11,7 @@
 - Les coups contraires aux règles (valet sur un 6, 2 sur une fondation vide…) sont refusés d'emblée (« Coup impossible »). Seuls les oublis (coup obligatoire non joué) passent, et « Crapette ! » (un bouton par joueur) les juge. Fautif :
 - Colonnes : une suite se déplace en bloc, par sa carte la plus ancienne (la plus haute) ; elle va sur une autre colonne ou sur le rebut adverse (valeur ±1, couleur différente, testée sur cette carte), jamais sur son propre rebut (sauf pile d'une seule carte). Sur une fondation, seule la carte du dessus part.
 - Trou au milieu (colonne vide) : il faut le combler avec la carte retournée ou le dessus de son rebut avant de retourner une carte ou de finir son tour, sinon coup oublié. Rien à combler avec = pas de faute.
+- Pioche vide : le rebut est mélangé à la main (une carte du dessus, une du dessous, en alternance) pour refaire la pioche (`melange` dans game.js).
 - Rebut adverse : on peut en prendre le dessus pour une fondation ou une colonne (pas pour un rebut) ; vers une fondation c'est obligatoire (oubli = faute), vers une colonne non.
 - Souris : un clic sur une carte (ou une suite) la fait suivre le curseur jusqu'au clic suivant (Échap annule) ; au toucher, rien ne change. Atouts : cadre violet + liseré doré. Fin de partie : « GROS LOOSER 😛 » pour le perdant. Plus de confirmation sur « Crapette ! ».
 - Fondations : l'As (Excuse pour les atouts) puis on monte dans la même enseigne ; avec l'As de pique posé, un 2 de pique retourné doit aller dessus, sinon coup oublié.
