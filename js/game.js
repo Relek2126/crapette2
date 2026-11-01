@@ -74,7 +74,8 @@ export function head(s, loc) {
 export function canTake(s, role, loc) {
   if (s.winner || s.turn !== role || !okLoc(s, loc)) return false;
   if (loc.k === 'tab') return !!peek(s, loc);
-  if (loc.k === 'waste' || loc.k === 'hand') return loc.p === role && !!peek(s, loc);
+  if (loc.k === 'waste') return !!peek(s, loc); // le rebut adverse aussi : on peut en prendre le dessus (voir canMove)
+  if (loc.k === 'hand') return loc.p === role && !!peek(s, loc);
   return false;
 }
 
@@ -85,6 +86,8 @@ export function canMove(s, role, from, to) {
   if (!canTake(s, role, from) || !okLoc(s, to) || same(from, to)) return false;
   // sur son propre rebut on pose la carte retournée ; une autre carte n'y va pas tant qu'on en tient une
   if (to.k === 'waste' && to.p === role && from.k !== 'hand' && s.sides[role].hand) return false;
+  // le dessus du rebut adverse ne va que sur une fondation ou une colonne
+  if (from.k === 'waste' && from.p !== role && to.k === 'waste') return false;
   // une pile de plusieurs cartes ne va pas sur son propre rebut (sur une fondation, seul le dessus part)
   if (from.k === 'tab' && s.tab[from.i].length > 1 && to.k === 'waste' && to.p === role) return false;
   return to.k === 'found' || to.k === 'tab' || to.k === 'waste';
@@ -120,16 +123,18 @@ export function canDraw(s, role) {
 // avec le dessus de son rebut ou d'une colonne (vers une fondation, une colonne non vide ou le
 // rebut adverse). Poser sur son propre rebut ou dans une colonne vide n'est jamais obligatoire.
 function coupObligatoire(s, role) {
-  const from = [{ k: 'hand', p: role }, { k: 'waste', p: role }, ...s.tab.map((_, i) => ({ k: 'tab', i }))].filter((l) => peek(s, l));
+  const from = [{ k: 'hand', p: role }, { k: 'waste', p: role }, { k: 'waste', p: other(role) }, ...s.tab.map((_, i) => ({ k: 'tab', i }))].filter((l) => peek(s, l));
   const to = [
     ...s.found.map((_, i) => ({ k: 'found', i })),
     ...s.tab.map((col, i) => ({ k: 'tab', i })).filter((l) => peek(s, l)),
     { k: 'waste', p: other(role) },
   ];
-  if (from.some((f) => to.some((t) => canMove(s, role, f, t) && isLegal(s, role, f, t)))) return true;
+  // le dessus du rebut adverse n'est obligatoire que vers une fondation
+  const theirs = (f) => f.k === 'waste' && f.p !== role;
+  if (from.some((f) => to.some((t) => (!theirs(f) || t.k === 'found') && canMove(s, role, f, t) && isLegal(s, role, f, t)))) return true;
   // un trou au milieu doit être comblé avec la carte retournée ou le dessus de son rebut
   const trou = s.tab.findIndex((col) => !col.length);
-  return trou >= 0 && from.some((f) => f.k !== 'tab' && canMove(s, role, f, { k: 'tab', i: trou }));
+  return trou >= 0 && from.some((f) => f.k !== 'tab' && !theirs(f) && canMove(s, role, f, { k: 'tab', i: trou }));
 }
 
 // Pénalité : le fautif récupère 2 cartes du tas de l'autre (pioche, sinon rebut), glissées sous sa pioche.
@@ -201,7 +206,7 @@ export function apply(state, role, a) {
     let cards;
     if (a.from.k === 'tab') cards = t.k === 'found' ? [s.tab[a.from.i].pop()] : s.tab[a.from.i].splice(0);
     else if (a.from.k === 'hand') { cards = [me.hand]; me.hand = null; }
-    else cards = [me.waste.pop()];
+    else cards = [s.sides[a.from.p].waste.pop()];
     if (t.k === 'found') s.found[t.i].push(...cards);
     else if (t.k === 'tab') s.tab[t.i].push(...cards);
     else s.sides[t.p].waste.push(...cards);

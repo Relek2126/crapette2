@@ -142,7 +142,7 @@ function renderGame() {
   const bar = h('div', 'bar');
   let msg;
   if (refusUntil > Date.now()) msg = 'Coup impossible';
-  else if (state.winner) msg = state.winner === me ? '🎉 Tu as gagné !' : mode === 'local' ? 'Partie terminée' : 'Perdu… bien joué à elle/lui';
+  else if (state.winner) msg = state.winner === me ? '🎉 Tu as gagné !' : mode === 'local' ? 'Partie terminée' : 'Perdu… gros looser 😛';
   else if (state.turn === me && state.sides[me].hand) msg = 'Joue la carte, sinon pose-la sur ton rebut';
   else if (state.turn === me) msg = mode === 'local' ? `Tour de ${NAMES[me]}` : sel ? 'Choisis où poser la carte' : 'À toi de jouer';
   else msg = notice || `Tour de ${NAMES[opp]}…`;
@@ -191,7 +191,18 @@ function flash(cls, text) {
   document.body.append(el);
   setTimeout(() => el.remove(), 1500);
 }
+let seenLoss = -1;
 function announce(me) {
+  // le perdant (ou, en mode test, l'adversaire du gagnant) se fait chambrer, une fois par fin de partie
+  if (state.winner && state.seq !== seenLoss) {
+    seenLoss = state.seq;
+    const loser = other(state.winner);
+    if (mode === 'local' || loser === me) {
+      const el = h('div', 'flash loose', mode === 'local' ? `${NAMES[loser]} : gros looser 😛` : 'GROS LOOSER 😛');
+      document.body.append(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+  }
   const burst = state.penalty && state.seq !== seenPenalty;
   if (burst) { seenPenalty = state.seq; flash('burst', 'CRAPETTE !'); }
   if (!state.winner && state.turn !== seenTurn) {
@@ -211,7 +222,7 @@ function rulesEl() {
     'But : jouer toutes ses cartes (pioche et rebut) avant l’adversaire. Jeu de tarot de 78 cartes : 5 au milieu, le reste partagé.',
     'Fondations (5 places en haut) : As puis 2, 3… jusqu’au Roi dans la même enseigne ; les atouts commencent par l’Excuse puis 1 à 21.',
     'Colonnes (5, communes) : on descend d’un cran en alternant rouge/noir. Les atouts ne se jouent qu’entre eux. Une colonne vide accepte tout. Quand une suite se forme, elle se déplace en bloc en la prenant par sa carte la plus ancienne (la plus haute) : sur une autre colonne, ou sur le rebut adverse (valeur ±1, couleur différente par rapport à cette carte). Sur une fondation, seule la carte du dessus d’une suite peut monter.',
-    'Rebut (le tien ou celui de l’adversaire) : carte de valeur +1 ou −1 et de couleur différente. Sur le rebut adverse, la carte rejoint son tas.',
+    'Rebut (le tien ou celui de l’adversaire) : carte de valeur +1 ou −1 et de couleur différente. Sur le rebut adverse, la carte rejoint son tas. Tu peux aussi prendre le dessus du rebut adverse pour le jouer sur une fondation ou une colonne ; si une fondation peut le recevoir, tu dois le faire.',
     'Ton tour : joue le dessus de ton rebut ou d’une colonne, puis touche ta pioche : la carte se retourne face visible sur la pioche. Si tu peux la jouer, fais-le, puis retourne la suivante. Sinon pose-la sur ton rebut, à côté : la main passe alors automatiquement. Poser une carte d’une colonne sur ton rebut (valeur ±1, couleur différente) passe aussi la main.',
     'Obligation : avant de retourner une carte ou de poser la tienne sur ton rebut, tu dois avoir joué tout coup possible (fondation, colonne, rebut adverse), et avoir comblé tout trou du milieu avec ta carte retournée ou le dessus de ton rebut. Sinon c’est une crapette.',
     'Pioche vide : touche-la pour la reformer avec ton rebut.',
@@ -325,6 +336,7 @@ function render() {
   else if (screen === 'editor') app.append(renderEditor());
   else if (screen === 'wait') app.append(renderWait());
   else if (screen === 'game' && state) app.append(renderGame());
+  updateFollow();
 }
 
 // ───────────── réseau et actions ─────────────
@@ -428,6 +440,60 @@ function dropTarget(x, y) {
   return best;
 }
 
+// Copie flottante de la carte (ou de la pile) attrapée ; pile : les cartes restent décalées comme dans la colonne.
+function buildGhost(grab) {
+  const r = grab[0].getBoundingClientRect();
+  let g;
+  if (grab.length === 1) {
+    g = grab[0].cloneNode(true);
+    g.style.width = r.width + 'px'; g.style.height = r.height + 'px';
+  } else {
+    g = h('div');
+    const last = grab[grab.length - 1].getBoundingClientRect();
+    g.style.width = r.width + 'px'; g.style.height = last.bottom - r.top + 'px';
+    for (const c of grab) {
+      const k = c.cloneNode(true);
+      k.style.cssText = `position:absolute;left:0;margin:0;width:${r.width}px;height:${r.height}px;top:${c.getBoundingClientRect().top - r.top}px`;
+      g.append(k);
+    }
+  }
+  g.classList.add('drag-card'); // pas « ghost » : c'est la classe des boutons transparents
+  document.body.append(g);
+  return g;
+}
+
+// Sur ordinateur, une carte choisie d'un clic suit la souris jusqu'au clic suivant (au toucher, rien ne change).
+let usedMouse = false;
+let mouse = null;
+let follow = null;
+function updateFollow() {
+  if (follow) { follow.el.remove(); follow = null; if (!drag) document.body.classList.remove('dragging'); }
+  if (!usedMouse || !mouse || !sel || screen !== 'game' || !state) return;
+  const slotEl = [...app.querySelectorAll('[data-loc]')].find((s) => locEq(JSON.parse(s.dataset.loc), sel));
+  const cards = slotEl ? [...slotEl.children].filter((c) => c.classList.contains('card')) : [];
+  if (!cards.length) return;
+  const grab = sel.k === 'tab' ? cards : [cards[cards.length - 1]];
+  const r = grab[0].getBoundingClientRect();
+  follow = { el: buildGhost(grab), grab, dx: r.width / 2, dy: Math.min(24, r.height / 3) };
+  document.body.classList.add('dragging'); // surligne les destinations
+  for (const c of grab) c.style.opacity = '.3';
+  moveFollow();
+}
+function moveFollow() {
+  if (!follow || !mouse) return;
+  follow.el.style.left = mouse.x - follow.dx + 'px';
+  follow.el.style.top = mouse.y - follow.dy + 'px';
+  document.querySelectorAll('.slot.over').forEach((s) => s.classList.remove('over'));
+  const t = dropTarget(mouse.x, mouse.y);
+  if (t) t.classList.add('over');
+}
+window.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  mouse = { x: e.clientX, y: e.clientY };
+  moveFollow();
+});
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sel) { sel = null; render(); } });
+
 function endDrag() {
   if (!drag) return;
   if (drag.ghost) drag.ghost.remove();
@@ -438,6 +504,8 @@ function endDrag() {
 }
 
 app.addEventListener('pointerdown', (e) => {
+  usedMouse = e.pointerType === 'mouse';
+  if (usedMouse) mouse = { x: e.clientX, y: e.clientY };
   if (screen !== 'game' || !state || e.button > 0) return;
   const card = e.target.closest('.card');
   const slotEl = card && card.closest('[data-loc]');
@@ -456,24 +524,8 @@ window.addEventListener('pointermove', (e) => {
   if (!drag.ghost) {
     if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
     const r = drag.card.getBoundingClientRect();
-    let g;
-    if (drag.grab.length === 1) {
-      g = drag.card.cloneNode(true);
-      g.style.width = r.width + 'px'; g.style.height = r.height + 'px';
-    } else {
-      // pile : les cartes restent décalées comme dans la colonne
-      g = h('div');
-      const last = drag.grab[drag.grab.length - 1].getBoundingClientRect();
-      g.style.width = r.width + 'px'; g.style.height = last.bottom - r.top + 'px';
-      for (const c of drag.grab) {
-        const k = c.cloneNode(true);
-        k.style.cssText = `position:absolute;left:0;margin:0;width:${r.width}px;height:${r.height}px;top:${c.getBoundingClientRect().top - r.top}px`;
-        g.append(k);
-      }
-    }
-    g.classList.add('drag-card'); // pas « ghost » : c'est la classe des boutons transparents
-    document.body.append(g);
-    drag.ghost = g; drag.dx = drag.x - r.left; drag.dy = drag.y - r.top;
+    drag.ghost = buildGhost(drag.grab);
+    drag.dx = drag.x - r.left; drag.dy = drag.y - r.top;
     for (const c of drag.grab) c.style.opacity = '.3';
     document.body.classList.add('dragging');
     sel = null;
@@ -517,10 +569,7 @@ app.addEventListener('click', async (e) => {
     else if (a === 'local') startLocal();
     else if (a === 'leave') { if (screen !== 'game' || confirm('Quitter la partie ?')) { leave(); render(); } }
     else if (a === 'rules') { showRules = !showRules; render(); }
-    else if (a === 'crapette') {
-      const who = mode === 'local' ? `${NAMES[btn.dataset.role]} : ` : '';
-      if (confirm(`${who}Crapette ! S’il n’y a aucune erreur, c’est toi qui prends 2 cartes. Confirmer ?`)) act({ t: 'crapette' }, btn.dataset.role);
-    }
+    else if (a === 'crapette') act({ t: 'crapette' }, btn.dataset.role);
     else if (a === 'rematch') {
       state = newGame(); sel = null; seenTurn = null; seenPenalty = -1; broadcast(); render();
     } else if (a === 'share') {

@@ -169,6 +169,33 @@ test('un 2 retourné alors que l\'As est posé : il faut le jouer dessus, sinon 
   assert.equal(c.penalty.why, 'oubli');
 });
 
+test('oublier de monter une carte du milieu sur la fondation : coup oublié', () => {
+  let s = base();
+  s.found[0] = [C(0, 1), C(0, 2), C(0, 3)]; // As, 2, 3 de pique posés
+  s.tab[0] = [C(0, 4)]; // le 4 de pique attend dans une colonne
+  const d = apply(s, 'host', { t: 'draw' }); // on retourne une carte sans l'avoir monté
+  assert.equal(d.fault.kind, 'oubli');
+  s.tab[0] = [C(1, 5), C(0, 4)]; // suite 5 de coeur, 4 de pique : le dessus (4♠) est jouable
+  assert.equal(apply(s, 'host', { t: 'draw' }).fault.kind, 'oubli');
+  assert.equal(move(s, 'host', T(0), F(0)).fault, null); // en le montant, tout va bien
+});
+
+test('le dessus du rebut adverse se prend pour une fondation ou une colonne', () => {
+  let s = base();
+  s.found[0] = [C(0, 1), C(0, 2), C(0, 3), C(0, 4)];
+  s.sides.guest.waste = [C(0, 5, 'guest')]; // 5 de pique chez l'adversaire
+  assert.equal(canMove(s, 'host', W('guest'), F(0)), true);
+  assert.equal(canMove(s, 'host', W('guest'), W('host')), false);
+  assert.equal(isLegal(s, 'host', W('guest'), F(0)), true);
+  const d = apply(s, 'host', { t: 'draw' }); // l'oublier est une faute
+  assert.equal(d.fault.kind, 'oubli');
+  s = move(s, 'host', W('guest'), F(0));
+  assert.equal(s.found[0].length, 5);
+  assert.equal(s.sides.guest.waste.length, 0);
+  assert.equal(s.turn, 'host');
+  assert.equal(canMove(s, 'host', W('guest'), F(0)), false); // plus rien à prendre
+});
+
 test('un trou au milieu non comblé : coup oublié', () => {
   let s = base();
   s.tab[0] = [C(0, 9)]; s.tab[1] = [C(0, 5)]; s.tab[2] = [C(0, 7)]; s.tab[3] = [C(0, 3)]; s.tab[4] = []; // colonne 5 vide
@@ -220,11 +247,11 @@ test('jouer sans avoir crié : crapette manquée, sans chaîne infinie', () => {
   s = move(s, 'host', T(0), W('host')); // 2 rouge puis As noir sur le rebut : légal, mais coup oublié
   assert.equal(s.fault.kind, 'oubli');
   assert.equal(s.turn, 'guest');
+  s.sides.host.waste = []; // l'As sur le rebut adverse serait lui aussi à jouer : on l'écarte pour isoler la crapette manquée
   const g = apply(s, 'guest', { t: 'draw' }); // guest ne crie pas
   assert.equal(g.fault.by, 'guest');
   assert.equal(g.fault.kind, 'manque');
   const g2 = structuredClone(g);
-  g2.sides.host.waste = []; // l'As n'est plus à jouer : aucune autre faute en vue
   const h = apply({ ...g2, turn: 'host' }, 'host', { t: 'draw' }); // host ne crie pas non plus
   assert.equal(h.fault, null);
   const c = apply(g, 'host', { t: 'crapette' }); // host punit guest
