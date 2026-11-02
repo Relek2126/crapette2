@@ -104,7 +104,7 @@ function stockEl(role) {
   // la carte retournée reste face visible sur la pioche, en attente d'être jouée ou posée sur le rebut
   if (held) return slot({ k: 'hand', p: role }, [cardEl(held), badge(n)]);
   const kids = n ? [backEl(role), badge(n, 'big', 1)] : [];
-  const el = slot({ k: 'stock', p: role }, kids);
+  const el = slot({ k: 'stock', p: role }, kids, 'stock');
   if (!n && state.sides[role].waste.length) el.append(h('span', 'recycle', '↻'));
   return el;
 }

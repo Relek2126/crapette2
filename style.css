@@ -4,10 +4,11 @@
   --ch: calc(var(--cw) * 1.4);
   --host: #2f6fd6;
   --guest: #d6452f;
-  --felt: #1d6b43;
+  --felt: #5a1428; /* bordeaux ; les coeurs sont très discrets pour que les cartes restent lisibles */
+  --hearts: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M16 26C6 18 8 8 16 8c4 0 6 3 6 3s2-3 6-3c8 0 10 10 0 18l-6 6z' fill='rgba(255,255,255,.055)' transform='translate(-6 -4) scale(.95)'/%3E%3Cpath d='M48 58C38 50 40 40 48 40c4 0 6 3 6 3s2-3 6-3c8 0 10 10 0 18l-6 6z' fill='rgba(255,255,255,.055)' transform='translate(-14 -10) scale(.95)'/%3E%3C/svg%3E");
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: var(--felt); color: #fff; font-family: system-ui, sans-serif; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+html, body { margin: 0; height: 100%; background: var(--hearts) var(--felt); color: #fff; font-family: system-ui, sans-serif; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 #app { max-width: 540px; margin: 0 auto; min-height: 100%; padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)); }
 
 #app.ingame { max-width: none; height: 100dvh; overflow: hidden; padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)); }
@@ -68,6 +69,7 @@ input[type=text], input:not([type]) { font: inherit; border: 0; border-radius: 1
 .col.sel .card,
 .slot.seltop .card:last-of-type,
 .slot.sel .card:last-of-type { outline: 3px solid #ffd54a; outline-offset: -1px; z-index: 4; transform: translateY(-8px); box-shadow: 0 8px 14px rgba(0,0,0,.45); }
+.slot.stock::before { content: ''; position: absolute; inset: -22px -10px -22px -22px; } /* zone de clic élargie, invisible */
 .slot.drop { outline: 2px dashed rgba(255,213,74,.6); outline-offset: 3px; border-radius: 8px; }
 .pen { position: absolute; top: 38px; left: 15%; right: 15%; z-index: 30; pointer-events: none; text-align: center; background: rgba(214,69,47,.95); border-radius: 8px; padding: 6px 10px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
 button.crap { background: #d6452f; }
@@ -115,7 +117,7 @@ body > .drag-card { position: fixed; z-index: 200; margin: 0; pointer-events: no
 .card.back { background: repeating-linear-gradient(45deg, var(--oc) 0 5px, #fff 5px 7px); background-size: cover; background-position: center; border: 2px solid #fff; }
 
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
-.box { background: #17503a; border-radius: 16px; padding: 18px; max-width: 420px; max-height: 90vh; overflow: auto; font-size: 14px; }
+.box { background: #43101f; border-radius: 16px; padding: 18px; max-width: 420px; max-height: 90vh; overflow: auto; font-size: 14px; }
 .box h3 { margin-top: 0; }
 .box li { margin-bottom: 8px; }
 
