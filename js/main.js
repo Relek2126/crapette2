@@ -231,7 +231,7 @@ function rulesEl() {
     'Ton tour : joue le dessus de ton rebut ou d’une colonne, puis touche ta pioche : la carte se retourne face visible sur la pioche. Si tu peux la jouer, fais-le, puis retourne la suivante. Sinon pose-la sur ton rebut, à côté : la main passe alors automatiquement. Poser une carte d’une colonne sur ton rebut (valeur ±1, couleur différente) passe aussi la main.',
     'Obligation : avant de retourner une carte ou de poser la tienne sur ton rebut, tu dois avoir joué tout coup possible (fondation, colonne, rebut adverse), et avoir comblé tout trou du milieu avec ta carte retournée ou le dessus de ton rebut. Sinon c’est une crapette.',
     'Pioche vide : touche-la pour la reformer avec ton rebut.',
-    'Chacun a son bouton « Crapette ! ». Si l’adversaire oublie une obligation, touche-le avant de jouer : son coup est annulé, il prend 2 cartes de ta pioche et c’est à toi. Si tu cries sans erreur, c’est toi qui prends 2 cartes de la sienne. Si tu joues sans avoir crié, c’est une crapette de plus pour toi.',
+    'Chacun a son bouton « Crapette ! ». Si l’adversaire oublie une obligation, tu peux crier à tout moment de son tour, même après qu’il a joué d’autres cartes (et pendant ton tour suivant, jusqu’à ce que tu le termines) : rien n’est annulé, il prend simplement 2 cartes de ta pioche. Si tu cries sans erreur, c’est toi qui prends 2 cartes de la sienne.',
     'Les coups impossibles (un valet sur un 6…) sont refusés. Mais oublier un coup obligatoire n’est pas signalé : c’est à vous de vous surveiller.',
   ].forEach((t) => ul.append(h('li', null, t)));
   box.append(ul);

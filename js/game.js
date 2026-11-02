@@ -38,7 +38,7 @@ export function newGame(first = Math.random() < 0.5 ? 'host' : 'guest') {
   sides[first] = { stock: give(first, 36), waste: [], hand: null };
   sides[other(first)] = { stock: give(other(first), 37), waste: [], hand: null };
   const found = Array.from({ length: 5 }, () => []);
-  // fault : { by, kind, prev } dernière faute non contestée, prev = état avant la faute
+  // fault : { by, kind } dernière faute non contestée
   // penalty : { who, why } pour l'affichage du dernier « Crapette ! »
   return { sides, tab, found, turn: first, fault: null, penalty: null, winner: null, seq: 0 };
 }
@@ -165,14 +165,10 @@ export function callCrapette(state, role) {
   if (state.winner && !f) return null;
   let s;
   if (f && f.by !== role) {
-    // bien vu : sa faute est annulée, il récupère 2 cartes chez l'adversaire et la main passe à celui qui a crié
-    s = structuredClone(f.prev);
+    // bien vu : rien n'est annulé, le fautif récupère seulement 2 cartes chez celui qui a crié
+    s = structuredClone(state);
     s.fault = null;
-    // une carte retournée mais non jouée retourne sur le rebut du fautif
-    const fh = s.sides[f.by];
-    if (fh.hand) { fh.waste.push(fh.hand); fh.hand = null; }
     transfer(s, role, f.by);
-    s.turn = role;
     s.penalty = { who: f.by, why: f.kind };
   } else {
     // fausse alerte : c'est celui qui a crié qui récupère 2 cartes chez l'adversaire
@@ -222,18 +218,10 @@ export function apply(state, role, a) {
   } else return null;
   if (endTurn) s.turn = other(role);
 
-  // Jouer sans avoir crié : trop tard pour contester, et c'est une crapette en soi
-  // (les crapettes se cumulent). Une crapette manquée n'en entraîne pas une autre.
-  if (s.fault && s.fault.by !== role) {
-    const was = s.fault.kind;
-    s.fault = null;
-    if (!fault && was !== 'manque') fault = 'manque';
-  }
-  if (fault && !s.fault) {
-    const prev = structuredClone(state);
-    prev.fault = null; prev.penalty = null;
-    s.fault = { by: role, kind: fault, prev };
-  }
+  // Une faute reste contestable à tout moment, même après d'autres coups : jusqu'à la fin du tour de
+  // l'adversaire (celui qui peut crier). Une nouvelle faute prend la place d'une faute de l'autre joueur.
+  if (fault && (!s.fault || s.fault.by !== role)) s.fault = { by: role, kind: fault };
+  else if (s.fault && s.fault.by !== role && endTurn) s.fault = null;
 
   s.penalty = null;
   checkWinner(s);

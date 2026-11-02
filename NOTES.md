@@ -15,8 +15,8 @@
 - Rebut adverse : on peut en prendre le dessus pour une fondation ou une colonne (pas pour un rebut) ; vers une fondation c'est obligatoire (oubli = faute), vers une colonne non.
 - Souris : un clic sur une carte (ou une suite) la fait suivre le curseur jusqu'au clic suivant (Échap annule) ; au toucher, rien ne change. Atouts : cadre violet + liseré doré. Fin de partie : « GROS LOOSER 😛 » pour le perdant. Plus de confirmation sur « Crapette ! ».
 - Fondations : l'As (Excuse pour les atouts) puis on monte dans la même enseigne ; avec l'As de pique posé, un 2 de pique retourné doit aller dessus, sinon coup oublié.
-- (Ancien :) Fautif : annulation, il récupère 2 cartes du tas de l'autre (choix de l'utilisateur ; le jeu de base, lui, fait retourner 2 cartes de sa propre pioche), la main passe à celui qui a crié. Fausse alerte : celui qui crie récupère 2 cartes du tas de l'autre.
-- Jouer sans avoir crié = crapette manquée (une seule à la fois, pas de chaîne).
+- Crapette : rien n'est annulé et le tour ne change pas ; le fautif récupère seulement 2 cartes du tas de celui qui a crié. Fausse alerte : celui qui crie récupère 2 cartes du tas de l'autre.
+- Une faute (une seule mémorisée, `state.fault = {by, kind}`) reste contestable tant que l'adversaire n'a pas fini son propre tour (fin du tour du fautif + tout le tour suivant de l'autre), même après d'autres coups. Plus de « crapette manquée » : jouer sans crier n'est plus une faute. Une nouvelle faute de l'autre joueur remplace l'ancienne.
 - Transport : plus de PeerJS/WebRTC (échouait entre 5G et Wi‑Fi, aucun relais TURN gratuit fiable). Les deux joueurs se connectent en WebSocket à `relay.js` (lancé par `server.js`, route `/ws`, bibliothèque `ws`), qui recopie les messages ; il faut donc jouer sur l'adresse du serveur (pas sur GitHub Pages). `vendor/peerjs.min.js` n'est plus utilisé. Hébergement prévu : Render (gratuit, se rendort après inactivité ≈ 15 min, réveil ≈ 30-60 s).
 - Réseau : l'invité envoie le `seq` qu'il voit ; un « Crapette ! » en retard est jugé sur l'état vu.
 
