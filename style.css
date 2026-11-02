@@ -66,6 +66,7 @@ input[type=text], input:not([type]) { font: inherit; border: 0; border-radius: 1
 .col { --tabh: calc(100dvh - var(--ch) - 60px - var(--cw) * .35); --step: max(calc(var(--ch) * .12), min(calc(var(--ch) * .22), calc((var(--tabh) - var(--ch)) / max(var(--n) - 1, 1)))); }
 .col .card + .card { margin-top: calc(var(--step) - var(--ch)); }
 .col.sel .card,
+.slot.seltop .card:last-of-type,
 .slot.sel .card:last-of-type { outline: 3px solid #ffd54a; outline-offset: -1px; z-index: 4; transform: translateY(-8px); box-shadow: 0 8px 14px rgba(0,0,0,.45); }
 .slot.drop { outline: 2px dashed rgba(255,213,74,.6); outline-offset: 3px; border-radius: 8px; }
 .pen { position: absolute; top: 38px; left: 15%; right: 15%; z-index: 30; pointer-events: none; text-align: center; background: rgba(214,69,47,.95); border-radius: 8px; padding: 6px 10px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
@@ -99,6 +100,7 @@ body > .drag-card { position: fixed; z-index: 200; margin: 0; pointer-events: no
 .card.atout::before { content: ''; position: absolute; inset: 0; border: 2px solid #f2c14e; border-radius: inherit; z-index: 3; pointer-events: none; }
 .card.atout .tl { background: rgba(255,255,255,.92); color: #111; padding: 1px 4px 2px 3px; border-radius: 0 0 8px 0; left: 0; top: 0; }
 .flash.loose { left: 0; right: 0; top: 18%; padding: 14px 0; font-size: min(15vh, 22vw); line-height: 1.05; background: rgba(120,20,20,.82); color: #fff; text-shadow: 0 4px 0 #000; animation: flash-loose 4s ease-out forwards; }
+.flash.win { left: 0; right: 0; top: 18%; padding: 14px 0; font-size: min(12vh, 18vw); line-height: 1.05; background: rgba(20,110,50,.85); color: #ffe27a; text-shadow: 0 4px 0 #0b3a1c; animation: flash-loose 4s ease-out forwards; }
 @keyframes flash-loose { 0% { transform: scale(.3) rotate(-8deg); opacity: 0; } 12% { transform: scale(1.08) rotate(-3deg); opacity: 1; } 20%, 85% { transform: scale(1) rotate(-3deg); opacity: 1; } 100% { transform: scale(1) rotate(-3deg); opacity: 0; } }
 .card .mid.num { font-size: calc(var(--cw) * .55); }
 .card::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--oc); z-index: 2; }

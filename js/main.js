@@ -29,7 +29,8 @@ const viewRole = () => (mode === 'local' ? state.turn : myRole);
 const NAMES = { host: 'Bastos', guest: 'PP' };
 const locEq =(a, b) => a.k === b.k && a.p === b.p && a.i === b.i;
 // coup permis par les règles (les coups interdits sont refusés avant même d'être joués)
-const allowed = (from, to) => canMove(state, viewRole(), from, to) && isLegal(state, viewRole(), from, to);
+// `top` : on tient seulement la dernière carte d'une suite, qui ne peut monter que sur une fondation
+const allowed = (from, to) => (!from.top || to.k === 'found') && canMove(state, viewRole(), from, to) && isLegal(state, viewRole(), from, to);
 let refusUntil = 0;
 function refuse() {
   refusUntil = Date.now() + 1600;
@@ -80,7 +81,7 @@ function slot(loc, kids, extra = '') {
   const el = h('div', 'slot ' + extra);
   el.dataset.loc = JSON.stringify(loc);
   if (loc.k === 'found' || loc.k === 'tab' || loc.k === 'waste') el.dataset.target = '1'; // destination possible
-  if (sel && locEq(sel, loc)) el.classList.add('sel');
+  if (sel && locEq(sel, loc)) el.classList.add(sel.top ? 'seltop' : 'sel');
   // carte en main : toutes les destinations possibles s'éclairent pareil (rien ne dit si le coup est permis)
   else if (sel && (loc.k === 'found' || loc.k === 'tab' || loc.k === 'waste')) el.classList.add('drop');
   if (!kids.length) el.append(h('div', 'empty'));
@@ -142,7 +143,7 @@ function renderGame() {
   const bar = h('div', 'bar');
   let msg;
   if (refusUntil > Date.now()) msg = 'Coup impossible';
-  else if (state.winner) msg = state.winner === me ? '🎉 Tu as gagné !' : mode === 'local' ? 'Partie terminée' : 'Perdu… gros looser 😛';
+  else if (state.winner) msg = state.winner === me && mode !== 'local' ? '🎉 Tu as gagné !' : mode === 'local' ? `🏆 ${NAMES[state.winner]} a gagné !` : 'Perdu… gros looser 😛';
   else if (state.turn === me && state.sides[me].hand) msg = 'Joue la carte, sinon pose-la sur ton rebut';
   else if (state.turn === me) msg = mode === 'local' ? `Tour de ${NAMES[me]}` : sel ? 'Choisis où poser la carte' : 'À toi de jouer';
   else msg = notice || `Tour de ${NAMES[opp]}…`;
@@ -199,6 +200,10 @@ function announce(me) {
     const loser = other(state.winner);
     if (mode === 'local' || loser === me) {
       const el = h('div', 'flash loose', mode === 'local' ? `${NAMES[loser]} : gros looser 😛` : 'GROS LOOSER 😛');
+      document.body.append(el);
+      setTimeout(() => el.remove(), 4000);
+    } else {
+      const el = h('div', 'flash win', 'BRAVO, TU AS GAGNÉ ! 🏆');
       document.body.append(el);
       setTimeout(() => el.remove(), 4000);
     }
@@ -483,7 +488,7 @@ function updateFollow() {
   const slotEl = [...app.querySelectorAll('[data-loc]')].find((s) => locEq(JSON.parse(s.dataset.loc), sel));
   const cards = slotEl ? [...slotEl.children].filter((c) => c.classList.contains('card')) : [];
   if (!cards.length) return;
-  const grab = sel.k === 'tab' ? cards : [cards[cards.length - 1]];
+  const grab = sel.k === 'tab' && !sel.top ? cards : [cards[cards.length - 1]];
   const r = grab[0].getBoundingClientRect();
   follow = { el: buildGhost(grab), grab, dx: r.width / 2, dy: Math.min(24, r.height / 3) };
   document.body.classList.add('dragging'); // surligne les destinations
@@ -524,9 +529,13 @@ app.addEventListener('pointerdown', (e) => {
   const loc = JSON.parse(slotEl.dataset.loc);
   if (!canTake(state, viewRole(), loc)) return;
   const cards = [...slotEl.children].filter((c) => c.classList.contains('card'));
-  // une colonne se glisse en bloc (n'importe quelle carte de la pile l'attrape) ; ailleurs, la carte du dessus
-  if (loc.k !== 'tab' && cards[cards.length - 1] !== card) return;
-  const grab = loc.k === 'tab' ? cards : [card];
+  // une colonne se glisse en bloc (n'importe quelle carte de la pile l'attrape), sauf la dernière carte d'une
+  // suite, qu'on prend seule pour la monter sur une fondation ; ailleurs, la carte du dessus
+  const last = cards[cards.length - 1] === card;
+  if (loc.k !== 'tab' && !last) return;
+  const top = loc.k === 'tab' && last && cards.length > 1;
+  const grab = loc.k === 'tab' && !top ? cards : [card];
+  if (top) loc.top = true;
   drag = { loc, card: grab[0], grab, id: e.pointerId, x: e.clientX, y: e.clientY, ghost: null, dx: 0, dy: 0 };
 });
 
@@ -617,6 +626,11 @@ app.addEventListener('click', async (e) => {
     if (canMove(state, me, sel, loc)) { refuse(); return; }
   }
   sel = canTake(state, me, loc) ? loc : null;
+  if (sel && sel.k === 'tab') {
+    // dernière carte d'une suite : on ne tient qu'elle (pour la fondation), sinon toute la suite
+    const cs = [...el.children].filter((c) => c.classList.contains('card'));
+    if (cs.length > 1 && cs[cs.length - 1] === e.target.closest('.card')) sel.top = true;
+  }
   render();
 });
 
