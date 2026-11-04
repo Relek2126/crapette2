@@ -111,23 +111,13 @@ export function isLegal(s, role, from, to) {
   // sur une fondation, une colonne ne donne que sa carte du dessus ; ailleurs, c'est la pile entière
   const c = to.k === 'found' ? peek(s, from) : head(s, from);
   const top = peek(s, to);
-  // la carte retournée ne se pose sur son rebut que si elle ne se joue nulle part ailleurs (sinon il faut la jouer)
-  if (from.k === 'hand' && to.k === 'waste' && to.p === role) return !jouable(s, role, from);
+  // la carte retournée qu'on ne peut pas jouer se pose sur son rebut, sans condition
+  if (from.k === 'hand' && to.k === 'waste' && to.p === role) return true;
   if (to.k === 'found') return fitsFound(top, c);
   // colonne : on descend d'un cran en alternant les couleurs ; une colonne vide accepte tout
   if (to.k === 'tab') return top ? top.rank === c.rank + 1 && mixOk(top, c) : true;
   // rebut (le sien ou celui de l'adversaire) : valeur +/- 1 et couleur différente
   return !!top && Math.abs(top.rank - c.rank) === 1 && mixOk(top, c);
-}
-
-// La carte retournée a-t-elle une place sur le plateau (fondation, colonne, y compris un trou, rebut adverse) ?
-function jouable(s, role, from) {
-  const to = [
-    ...s.found.map((_, i) => ({ k: 'found', i })),
-    ...s.tab.map((_, i) => ({ k: 'tab', i })),
-    { k: 'waste', p: other(role) },
-  ];
-  return to.some((t) => canMove(s, role, from, t) && isLegal(s, role, from, t));
 }
 
 export function canDraw(s, role) {
