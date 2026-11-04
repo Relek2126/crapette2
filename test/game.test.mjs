@@ -102,16 +102,13 @@ test('carte retournée jouable : on la joue puis on retourne la suivante', () =>
   assert.ok(apply(s, 'host', { t: 'draw' }));
 });
 
-test('poser sur son rebut une carte jouable ailleurs : coup oublié', () => {
+test('carte retournée jouable : impossible de la reposer sur son rebut', () => {
   let s = base();
   s.sides.host.stock.push(C(0, 1));
   s = apply(s, 'host', { t: 'draw' });
-  s = move(s, 'host', H('host'), W('host')); // l'As allait sur une fondation
-  assert.equal(s.fault.kind, 'oubli');
-  const c = apply(s, 'guest', { t: 'crapette' });
-  assert.equal(c.turn, 'guest');
-  assert.equal(c.sides.host.hand, null);
-  assert.equal(count(c, 'host'), 3 + 1 + 2); // 3 en pioche + l'As sur le rebut + 2 de guest
+  assert.equal(move(s, 'host', H('host'), W('host')), null); // l'As va sur une fondation : on doit le jouer
+  assert.equal(s.sides.host.hand.rank, 1);
+  assert.ok(move(s, 'host', H('host'), F(0)));
 });
 
 test('la carte retournée ne se joue que par son propriétaire, et seule elle va sur son rebut', () => {
@@ -162,11 +159,8 @@ test('un 2 retourné alors que l\'As est posé : il faut le jouer dessus, sinon 
   s.found[0] = [C(0, 1)];
   s.sides.host.stock.push(C(0, 2));
   s = apply(s, 'host', { t: 'draw' });
-  s = move(s, 'host', H('host'), W('host')); // le pose sur son rebut au lieu de l'As
-  assert.equal(s.fault.kind, 'oubli');
-  const c = apply(s, 'guest', { t: 'crapette' });
-  assert.equal(c.turn, 'guest');
-  assert.equal(c.penalty.why, 'oubli');
+  assert.equal(move(s, 'host', H('host'), W('host')), null); // pas sur son rebut : il faut le jouer sur l'As
+  assert.ok(move(s, 'host', H('host'), F(0)));
 });
 
 test('oublier de monter une carte du milieu sur la fondation : coup oublié', () => {
@@ -303,7 +297,7 @@ test('suite avec les atouts : en descendant seulement', () => {
   assert.equal(s.turn, 'host');
   let t = base();
   t.sides.host.waste = [C(ATOUT, 15)];
-  t.sides.host.stock.push(C(ATOUT, 16));
+  t.sides.host.stock.push(C(ATOUT, 18)); // en montant : pas une suite
   t = move(apply(t, 'host', { t: 'draw' }), 'host', H('host'), W('host'));
   assert.equal(t.turn, 'guest');
 });

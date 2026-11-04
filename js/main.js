@@ -238,7 +238,7 @@ function rulesEl() {
     'Obligation : avant de retourner une carte ou de poser la tienne sur ton rebut, tu dois avoir joué tout coup possible (fondation, colonne, rebut adverse), et avoir comblé tout trou du milieu avec ta carte retournée ou le dessus de ton rebut. Sinon c’est une crapette.',
     'Pioche vide : touche-la pour la reformer avec ton rebut.',
     'Chacun a son bouton « Crapette ! ». Si l’adversaire oublie une obligation, tu peux crier à tout moment de son tour, même après qu’il a joué d’autres cartes (et pendant ton tour suivant, jusqu’à ce que tu le termines) : rien n’est annulé, il prend simplement 2 cartes de ta pioche. Si tu cries sans erreur, c’est toi qui prends 2 cartes de la sienne. Si tu termines ton tour sans avoir crié sur une faute de l’adversaire, c’est une « crapette manquée » : il peut te la reprocher à son tour.',
-    'Suite : si la carte retournée ne se joue nulle part mais descend d’un cran sur le dessus de ton rebut avec une couleur différente (un 9 de coeur sur un 10 de pique ; atouts entre eux), pose-la dessus : « SUITE ! », ton tour continue. Seulement en descendant. Une fois la carte retournée, tu dois la jouer ou la poser sur ton rebut avant tout autre coup.',
+    'Suite : si la carte retournée ne se joue nulle part mais descend d’un cran sur le dessus de ton rebut avec une couleur différente (un 9 de coeur sur un 10 de pique ; atouts entre eux), pose-la dessus : « SUITE ! », ton tour continue. Seulement en descendant. Une fois la carte retournée, tu ne touches à rien d’autre : si elle se joue quelque part (fondation, colonne, trou, rebut adverse), tu dois la jouer, tu ne peux pas la reposer sur ton rebut ; sinon tu la poses sur ton rebut.',
     'Atouts : en montant un atout d’une colonne sur une fondation, toute la suite qui s’enchaîne monte toute seule.',
     'Les coups impossibles (un valet sur un 6…) sont refusés. Mais oublier un coup obligatoire n’est pas signalé : c’est à vous de vous surveiller.',
   ].forEach((t) => ul.append(h('li', null, t)));
@@ -483,9 +483,52 @@ function buildChat() {
     conn.send({ t: 'chat', text });
     addChat(viewRole(), text);
   });
-  chatEl.append(head, chatMsgs, form);
+  const grip = h('div', 'chatgrip');
+  chatEl.append(head, chatMsgs, form, grip);
   document.body.append(chatEl);
+  try { Object.assign(chatBox, JSON.parse(localStorage.getItem('crapette.chat') || '{}')); } catch {}
+  placeChat();
+  dragChat(head, 'move');
+  dragChat(grip, 'size');
 }
+
+// Position et taille de la fenêtre (en pixels), gardées pour la prochaine ouverture.
+const chatBox = { x: null, y: 44, w: 330, h: 250 };
+function placeChat() {
+  const W = window.innerWidth, H = window.innerHeight;
+  chatBox.w = Math.max(200, Math.min(chatBox.w, W - 8));
+  chatBox.h = Math.max(120, Math.min(chatBox.h, H - 8));
+  if (chatBox.x == null) chatBox.x = W - chatBox.w - 8;
+  chatBox.x = Math.max(0, Math.min(chatBox.x, W - chatBox.w));
+  chatBox.y = Math.max(0, Math.min(chatBox.y, H - chatBox.h));
+  Object.assign(chatEl.style, { left: chatBox.x + 'px', top: chatBox.y + 'px', width: chatBox.w + 'px', height: chatBox.h + 'px', right: 'auto' });
+}
+// Glisser l'en-tête déplace la fenêtre, glisser le coin en bas à droite l'agrandit (souris ou doigt).
+function dragChat(handle, what) {
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    const from = { ...chatBox, cx: e.clientX, cy: e.clientY };
+    const move = (ev) => {
+      const dx = ev.clientX - from.cx, dy = ev.clientY - from.cy;
+      if (what === 'move') { chatBox.x = from.x + dx; chatBox.y = from.y + dy; }
+      else { chatBox.w = from.w + dx; chatBox.h = from.h + dy; }
+      placeChat();
+    };
+    const end = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', end);
+      handle.removeEventListener('pointercancel', end);
+      try { localStorage.setItem('crapette.chat', JSON.stringify(chatBox)); } catch {}
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+  });
+}
+
+window.addEventListener('resize', () => { if (chatEl) placeChat(); });
 
 function paintChat() {
   if (!chatEl) return;
