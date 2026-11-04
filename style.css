@@ -123,3 +123,4 @@ body > .drag-card { position: fixed; z-index: 200; margin: 0; pointer-events: no
 
 
 
+.flash.suite { left: 0; right: 0; top: 36%; padding: 10px 0; font-size: 56px; background: rgba(255,213,74,.9); color: #5a1428; text-shadow: 0 2px 0 #fff; animation: flash-slide 1.4s ease-out forwards; }

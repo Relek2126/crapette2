@@ -1,6 +1,6 @@
 // Tests du moteur : node test/game.test.mjs   (ou npm test)
 import assert from 'node:assert/strict';
-import { newGame, apply, canMove, isLegal, canDraw, melange, ATOUT } from '../js/game.js';
+import { newGame, apply, canTake, canMove, isLegal, canDraw, melange, ATOUT } from '../js/game.js';
 
 let n = 0;
 const test = (name, fn) => { fn(); n++; console.log('ok', name); };
@@ -256,9 +256,82 @@ test('crapette possible à tout moment du tour de l\'adversaire, même après qu
   assert.equal(c.sides.guest.hand.id, g.sides.guest.hand.id); // son coup n'est pas annulé
   assert.equal(c.turn, 'guest');
   assert.equal(count(c, 'host'), count(g, 'host') + 2);
-  const fin = move(g, 'guest', H('guest'), W('guest')); // guest finit son tour sans crier : la faute s'éteint
+  const fin = move(g, 'guest', H('guest'), W('guest')); // guest finit son tour sans crier : crapette manquée
   assert.equal(fin.turn, 'host');
-  assert.equal(fin.fault, null);
+  assert.deepEqual(fin.fault, { by: 'guest', kind: 'manque' });
+  const m = apply(fin, 'host', { t: 'crapette' }); // host peut la lui reprocher
+  assert.equal(m.penalty.who, 'guest');
+  assert.equal(m.penalty.why, 'manque');
+  assert.equal(count(m, 'guest'), count(fin, 'guest') + 2);
+  // finir son tour sans crier sur une crapette manquée n'en entraîne pas une autre
+  s = fin.sides.host.hand ? fin : apply(fin, 'host', { t: 'draw' });
+  s.sides.host.waste = [];
+  s = move(s, 'host', H('host'), W('host'));
+  assert.equal(s.fault, null);
+});
+
+test('suite : la carte retournée qui descend d\'un cran sur son rebut ne termine pas le tour', () => {
+  let s = base();
+  s.sides.host.waste = [C(0, 10)]; // 10 de pique
+  s.sides.host.stock.push(C(1, 9)); // 9 de coeur : couleur différente, un cran plus bas
+  s = apply(s, 'host', { t: 'draw' });
+  s = move(s, 'host', H('host'), W('host'));
+  assert.equal(s.turn, 'host');
+  assert.equal(s.suite, 'host');
+  assert.equal(s.fault, null);
+  assert.equal(s.sides.host.hand, null);
+  // la suite se prolonge : on peut retourner la carte suivante
+  assert.ok(apply(s, 'host', { t: 'draw' }));
+  // en montant (ou même couleur), c'est un simple dépôt qui termine le tour
+  let t = base();
+  t.sides.host.waste = [C(0, 10)];
+  t.sides.host.stock.push(C(1, 11));
+  t = move(apply(t, 'host', { t: 'draw' }), 'host', H('host'), W('host'));
+  assert.equal(t.turn, 'guest');
+  let u = base();
+  u.sides.host.waste = [C(0, 10)];
+  u.sides.host.stock.push(C(0, 9)); // même couleur : pas une suite
+  u = move(apply(u, 'host', { t: 'draw' }), 'host', H('host'), W('host'));
+  assert.equal(u.turn, 'guest');
+});
+
+test('suite avec les atouts : en descendant seulement', () => {
+  let s = base();
+  s.sides.host.waste = [C(ATOUT, 15)];
+  s.sides.host.stock.push(C(ATOUT, 14));
+  s = move(apply(s, 'host', { t: 'draw' }), 'host', H('host'), W('host'));
+  assert.equal(s.turn, 'host');
+  let t = base();
+  t.sides.host.waste = [C(ATOUT, 15)];
+  t.sides.host.stock.push(C(ATOUT, 16));
+  t = move(apply(t, 'host', { t: 'draw' }), 'host', H('host'), W('host'));
+  assert.equal(t.turn, 'guest');
+});
+
+test('atouts : la suite de la colonne monte toute seule sur la fondation', () => {
+  let s = base();
+  s.found[0] = [C(ATOUT, 0), C(ATOUT, 1)];
+  s.tab[0] = [C(ATOUT, 5), C(ATOUT, 4), C(ATOUT, 3), C(ATOUT, 2)]; // le 2 monte, puis 3, 4, 5 s'enchaînent
+  s = move(s, 'host', T(0), F(0));
+  assert.equal(s.found[0].length, 6);
+  assert.equal(s.tab[0].length, 0);
+  // couleurs ordinaires : une seule carte à la fois
+  let t = base();
+  t.found[0] = [C(0, 1)];
+  t.tab[0] = [C(0, 4), C(1, 3), C(0, 2)];
+  t = move(t, 'host', T(0), F(0));
+  assert.equal(t.found[0].length, 2);
+  assert.equal(t.tab[0].length, 2);
+});
+
+test('carte retournée : impossible de jouer autre chose tant qu\'on la tient', () => {
+  let s = base();
+  s.sides.host.stock.push(C(3, 9));
+  s = apply(s, 'host', { t: 'draw' });
+  s.tab[1] = [C(0, 1)]; // un As jouable sur une fondation
+  assert.equal(move(s, 'host', T(1), F(0)), null);
+  assert.equal(canTake(s, 'host', T(1)), false);
+  assert.ok(move(s, 'host', H('host'), W('host'))); // la carte retournée, elle, va sur le rebut
 });
 
 test('fausse alerte : celui qui crie récupère 2 cartes de l\'autre', () => {

@@ -193,7 +193,9 @@ function flash(cls, text) {
   setTimeout(() => el.remove(), 1500);
 }
 let seenLoss = -1;
+let seenSuite = -1;
 function announce(me) {
+  if (state.suite && state.seq !== seenSuite) { seenSuite = state.seq; flash('suite', 'SUITE !'); }
   // le perdant (ou, en mode test, l'adversaire du gagnant) se fait chambrer, une fois par fin de partie
   if (state.winner && state.seq !== seenLoss) {
     seenLoss = state.seq;
@@ -231,7 +233,9 @@ function rulesEl() {
     'Ton tour : joue le dessus de ton rebut ou d’une colonne, puis touche ta pioche : la carte se retourne face visible sur la pioche. Si tu peux la jouer, fais-le, puis retourne la suivante. Sinon pose-la sur ton rebut, à côté : la main passe alors automatiquement. Poser une carte d’une colonne sur ton rebut (valeur ±1, couleur différente) passe aussi la main.',
     'Obligation : avant de retourner une carte ou de poser la tienne sur ton rebut, tu dois avoir joué tout coup possible (fondation, colonne, rebut adverse), et avoir comblé tout trou du milieu avec ta carte retournée ou le dessus de ton rebut. Sinon c’est une crapette.',
     'Pioche vide : touche-la pour la reformer avec ton rebut.',
-    'Chacun a son bouton « Crapette ! ». Si l’adversaire oublie une obligation, tu peux crier à tout moment de son tour, même après qu’il a joué d’autres cartes (et pendant ton tour suivant, jusqu’à ce que tu le termines) : rien n’est annulé, il prend simplement 2 cartes de ta pioche. Si tu cries sans erreur, c’est toi qui prends 2 cartes de la sienne.',
+    'Chacun a son bouton « Crapette ! ». Si l’adversaire oublie une obligation, tu peux crier à tout moment de son tour, même après qu’il a joué d’autres cartes (et pendant ton tour suivant, jusqu’à ce que tu le termines) : rien n’est annulé, il prend simplement 2 cartes de ta pioche. Si tu cries sans erreur, c’est toi qui prends 2 cartes de la sienne. Si tu termines ton tour sans avoir crié sur une faute de l’adversaire, c’est une « crapette manquée » : il peut te la reprocher à son tour.',
+    'Suite : si la carte retournée ne se joue nulle part mais descend d’un cran sur le dessus de ton rebut avec une couleur différente (un 9 de coeur sur un 10 de pique ; atouts entre eux), pose-la dessus : « SUITE ! », ton tour continue. Seulement en descendant. Une fois la carte retournée, tu dois la jouer ou la poser sur ton rebut avant tout autre coup.',
+    'Atouts : en montant un atout d’une colonne sur une fondation, toute la suite qui s’enchaîne monte toute seule.',
     'Les coups impossibles (un valet sur un 6…) sont refusés. Mais oublier un coup obligatoire n’est pas signalé : c’est à vous de vous surveiller.',
   ].forEach((t) => ul.append(h('li', null, t)));
   box.append(ul);
@@ -266,8 +270,9 @@ function renderWait() {
     else {
       el.append(h('div', 'bigcode', code));
       el.append(h('p', 'sub', 'Envoie ce code (ou le lien) à ta partenaire, puis attends qu’elle rejoigne.'));
-      const s = h('button', 'primary', 'Partager le lien'); s.dataset.act = 'share';
-      el.append(s);
+      const c = h('button', 'primary', 'Copier le code'); c.dataset.act = 'copy';
+      const s = h('button', null, 'Partager le lien'); s.dataset.act = 'share';
+      el.append(c, s);
     }
   }
   if (notice) el.append(h('p', 'notice', notice));
@@ -343,7 +348,7 @@ function autoHold() {
 function render() {
   autoHold();
   app.replaceChildren();
-  if (!state) { seenTurn = null; seenPenalty = -1; } // nouvelle partie : on réannonce le tour
+  if (!state) { seenTurn = null; seenPenalty = -1; seenSuite = -1; } // nouvelle partie : on réannonce le tour
   const ingame = screen === 'game' && !!state;
   app.classList.toggle('ingame', ingame);
   // en plein écran / appli installée, on verrouille le paysage (ignoré ailleurs)
@@ -591,7 +596,18 @@ app.addEventListener('click', async (e) => {
     else if (a === 'rules') { showRules = !showRules; render(); }
     else if (a === 'crapette') act({ t: 'crapette' }, btn.dataset.role);
     else if (a === 'rematch') {
-      state = newGame(); sel = null; seenTurn = null; seenPenalty = -1; broadcast(); render();
+      state = newGame(); sel = null; seenTurn = null; seenPenalty = -1; seenSuite = -1; broadcast(); render();
+    } else if (a === 'copy') {
+      let ok = false;
+      try { await navigator.clipboard.writeText(code); ok = true; } catch {}
+      if (!ok) { // repli (anciens navigateurs, page sans permission) : copie via un champ caché
+        const t = h('textarea'); t.value = code; t.style.cssText = 'position:fixed;opacity:0';
+        document.body.append(t); t.select();
+        try { ok = document.execCommand('copy'); } catch {}
+        t.remove();
+      }
+      notice = ok ? 'Code copié !' : 'Copie impossible : recopie le code à la main.';
+      render();
     } else if (a === 'share') {
       const url = location.origin + location.pathname + '?join=' + code;
       try { navigator.share ? await navigator.share({ title: 'Crapette', text: 'Rejoins ma partie de crapette !', url }) : await navigator.clipboard.writeText(url); notice = navigator.share ? '' : 'Lien copié !'; }
@@ -625,6 +641,8 @@ app.addEventListener('click', async (e) => {
     if (allowed(sel, loc)) { act({ t: 'move', from: sel, to: loc }); return; }
     if (canMove(state, me, sel, loc)) { refuse(); return; }
   }
+  // carte retournée en main : on doit la jouer d'abord, on ne touche à rien d'autre
+  if (state.sides[me].hand && loc.k !== 'hand' && (loc.k === 'tab' || loc.k === 'waste')) { refuse(); return; }
   sel = canTake(state, me, loc) ? loc : null;
   if (sel && sel.k === 'tab') {
     // dernière carte d'une suite : on ne tient qu'elle (pour la fondation), sinon toute la suite

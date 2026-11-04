@@ -40,7 +40,7 @@ export function newGame(first = Math.random() < 0.5 ? 'host' : 'guest') {
   const found = Array.from({ length: 5 }, () => []);
   // fault : { by, kind } dernière faute non contestée
   // penalty : { who, why } pour l'affichage du dernier « Crapette ! »
-  return { sides, tab, found, turn: first, fault: null, penalty: null, winner: null, seq: 0 };
+  return { sides, tab, found, turn: first, fault: null, penalty: null, suite: null, winner: null, seq: 0 };
 }
 
 const last = (a) => (a && a.length ? a[a.length - 1] : null);
@@ -73,6 +73,8 @@ export function head(s, loc) {
 
 export function canTake(s, role, loc) {
   if (s.winner || s.turn !== role || !okLoc(s, loc)) return false;
+  // une fois la carte retournée, on doit la jouer (ou la poser sur son rebut) avant toute autre action
+  if (loc.k !== 'hand' && s.sides[role].hand) return false;
   if (loc.k === 'tab') return !!peek(s, loc);
   if (loc.k === 'waste') return !!peek(s, loc); // le rebut adverse aussi : on peut en prendre le dessus (voir canMove)
   if (loc.k === 'hand') return loc.p === role && !!peek(s, loc);
@@ -99,6 +101,10 @@ const fitsFound = (top, c) =>
 
 // Les atouts n'ont pas de couleur et ne se jouent qu'entre eux.
 const mixOk = (a, b) => isAtout(a) === isAtout(b) && (isAtout(a) || isRed(a) !== isRed(b));
+
+// Suite : la carte retournée suit le dessus de son rebut en descendant d'un cran (10 de pique puis 9 de
+// coeur ; atouts entre eux). On la pose alors sur le rebut sans que le tour se termine.
+const suit = (top, c) => !!top && !!c && top.rank === c.rank + 1 && mixOk(top, c);
 
 // Le coup est-il conforme aux règles ?
 export function isLegal(s, role, from, to) {
@@ -178,6 +184,7 @@ export function callCrapette(state, role) {
     s.penalty = { who: role, why: 'faux' };
   }
   s.winner = null;
+  s.suite = null;
   checkWinner(s);
   s.seq = state.seq + 1;
   return s;
@@ -196,6 +203,7 @@ export function apply(state, role, a) {
   // sinon on la pose sur son rebut. Le tour se termine tout seul dès qu'une carte arrive sur son
   // propre rebut, et il faut alors avoir joué tout coup possible.
   let endTurn = false;
+  let suite = false;
   if (a.t === 'draw') {
     if (!canDraw(s, role)) return null;
     if (coupObligatoire(s, role)) fault = 'oubli';
@@ -206,13 +214,21 @@ export function apply(state, role, a) {
     // un coup contraire aux règles est refusé d'emblée (il ne reste que les oublis à punir)
     if (!isLegal(s, role, a.from, a.to)) return null;
     const t = a.to;
-    endTurn = t.k === 'waste' && t.p === role;
-    if (endTurn && coupObligatoire(s, role)) fault = 'oubli';
+    const surRebut = t.k === 'waste' && t.p === role;
+    suite = surRebut && a.from.k === 'hand' && suit(last(me.waste), me.hand);
+    endTurn = surRebut && !suite;
+    if (surRebut && coupObligatoire(s, role)) fault = 'oubli';
     let cards;
     if (a.from.k === 'tab') cards = t.k === 'found' ? [s.tab[a.from.i].pop()] : s.tab[a.from.i].splice(0);
     else if (a.from.k === 'hand') { cards = [me.hand]; me.hand = null; }
     else cards = [s.sides[a.from.p].waste.pop()];
-    if (t.k === 'found') s.found[t.i].push(...cards);
+    if (t.k === 'found') {
+      s.found[t.i].push(...cards);
+      // atouts : la suite de la colonne qui s'enchaîne sur la fondation monte toute seule
+      const col = s.tab[a.from.i];
+      if (a.from.k === 'tab' && isAtout(cards[0]))
+        while (col.length && fitsFound(last(s.found[t.i]), last(col)) && isAtout(last(col))) s.found[t.i].push(col.pop());
+    }
     else if (t.k === 'tab') s.tab[t.i].push(...cards);
     else s.sides[t.p].waste.push(...cards);
   } else return null;
@@ -220,9 +236,14 @@ export function apply(state, role, a) {
 
   // Une faute reste contestable à tout moment, même après d'autres coups : jusqu'à la fin du tour de
   // l'adversaire (celui qui peut crier). Une nouvelle faute prend la place d'une faute de l'autre joueur.
+  // Finir son tour sans avoir crié sur une faute de l'autre : crapette manquée (elle n'en entraîne pas une autre).
   if (fault && (!s.fault || s.fault.by !== role)) s.fault = { by: role, kind: fault };
-  else if (s.fault && s.fault.by !== role && endTurn) s.fault = null;
+  else if (s.fault && s.fault.by !== role && endTurn) {
+    const was = s.fault.kind;
+    s.fault = was === 'manque' ? null : { by: role, kind: 'manque' };
+  }
 
+  s.suite = suite ? role : null; // pour le bandeau « SUITE »
   s.penalty = null;
   checkWinner(s);
   s.seq++;
