@@ -150,6 +150,10 @@ function renderGame() {
   bar.append(h('div', 'msg' + (state.turn === me && !state.winner ? ' mine' : ''), msg));
   const btns = h('div', 'btns');
   if (state.winner && mode !== 'guest') { const b = h('button', 'mini primary', 'Rejouer'); b.dataset.act = 'rematch'; btns.append(b); }
+  if (mode !== 'local') {
+    const ch = h('button', 'mini' + (chatUnread ? ' unread' : ''), chatUnread ? `💬 ${chatUnread}` : '💬'); ch.dataset.act = 'chat';
+    btns.append(ch);
+  }
   const r = h('button', 'mini', '?'); r.dataset.act = 'rules'; btns.append(r);
   const q = h('button', 'mini', '✕'); q.dataset.act = 'leave'; btns.append(q);
   bar.append(btns);
@@ -396,6 +400,8 @@ function attachGuest(c) {
       if (!state) state = newGame();
       c.send({ t: 'init', skin: mySkin, state });
       screen = 'game'; notice = ''; render();
+    } else if (m.t === 'chat') {
+      if (typeof m.text === 'string') addChat('guest', m.text);
     } else if (m.t === 'act') {
       // Un « Crapette ! » criqué sur un état que l'hôte a déjà dépassé (latence) est jugé sur
       // l'état que l'invité voyait ; toute autre action périmée est ignorée.
@@ -421,6 +427,7 @@ function startGuest(c) {
       conn = cn;
       cn.send({ t: 'hello', skin: mySkin });
       cn.on('data', (m) => {
+        if (m.t === 'chat') { if (typeof m.text === 'string') addChat('host', m.text); return; }
         if (m.t === 'init') { skins.host = m.skin; state = m.state; screen = 'game'; notice = ''; }
         else if (m.t === 'state') state = m.state;
         sel = null; render();
@@ -441,7 +448,75 @@ function leave() {
   try { conn && conn.close(); } catch {}
   try { peer && peer.destroy(); } catch {}
   conn = null; peer = null; state = null; sel = null; mode = null; notice = ''; code = ''; screen = 'home';
+  resetChat();
   history.replaceState(null, '', location.pathname);
+}
+
+// ───────────── chat ─────────────
+// Petite fenêtre floue ouverte par le bouton 💬 ; elle vit hors de #app pour garder le champ de saisie
+// et la position de lecture quand le plateau se redessine.
+let chatLog = [];
+let chatOpen = false;
+let chatUnread = 0;
+let chatEl = null;
+let chatMsgs = null;
+let chatInput = null;
+
+function buildChat() {
+  chatEl = h('div', 'chat');
+  const head = h('div', 'chathead');
+  head.append(h('b', null, 'Discussion'));
+  const x = h('button', 'mini', '✕'); x.type = 'button';
+  x.addEventListener('click', () => toggleChat(false));
+  head.append(x);
+  chatMsgs = h('div', 'chatlog');
+  const form = h('form', 'chatform');
+  chatInput = h('input'); chatInput.maxLength = 200; chatInput.placeholder = 'Écris un message…'; chatInput.autocomplete = 'off';
+  chatInput.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') toggleChat(false); });
+  const go = h('button', 'mini primary', 'Envoyer'); go.type = 'submit';
+  form.append(chatInput, go);
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text || !conn || !conn.open) return;
+    chatInput.value = '';
+    conn.send({ t: 'chat', text });
+    addChat(viewRole(), text);
+  });
+  chatEl.append(head, chatMsgs, form);
+  document.body.append(chatEl);
+}
+
+function paintChat() {
+  if (!chatEl) return;
+  chatEl.classList.toggle('open', chatOpen);
+  chatMsgs.replaceChildren(...chatLog.map((m) => {
+    const row = h('div', 'chatmsg' + (m.from === viewRole() ? ' mine' : ''));
+    row.append(h('b', null, NAMES[m.from]), document.createTextNode(' ' + m.text));
+    return row;
+  }));
+  chatMsgs.scrollTop = chatMsgs.scrollHeight;
+}
+
+function toggleChat(open = !chatOpen) {
+  if (!chatEl) buildChat();
+  chatOpen = open;
+  if (open) chatUnread = 0;
+  paintChat();
+  if (open) chatInput.focus();
+  render();
+}
+
+function addChat(from, text) {
+  chatLog.push({ from, text: String(text).slice(0, 200) });
+  if (chatLog.length > 100) chatLog.shift();
+  if (!chatOpen && from !== viewRole()) { chatUnread++; render(); }
+  paintChat();
+}
+
+function resetChat() {
+  chatLog = []; chatOpen = false; chatUnread = 0;
+  paintChat();
 }
 
 // ───────────── glisser-déposer ─────────────
@@ -593,6 +668,7 @@ app.addEventListener('click', async (e) => {
     else if (a === 'home') { screen = 'home'; render(); }
     else if (a === 'local') startLocal();
     else if (a === 'leave') { if (screen !== 'game' || confirm('Quitter la partie ?')) { leave(); render(); } }
+    else if (a === 'chat') toggleChat();
     else if (a === 'rules') { showRules = !showRules; render(); }
     else if (a === 'crapette') act({ t: 'crapette' }, btn.dataset.role);
     else if (a === 'rematch') {
